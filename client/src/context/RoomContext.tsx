@@ -29,6 +29,8 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
 
     const [screenSharingId, setScreenSharingId] = useState<string | null>()
 
+    const [roomId, setRoomId] = useState<string | null>(null);
+
     const enterRoom = ({ roomId }: { roomId: string}) => {
         console.log({roomId});
         navigate(`/room/${roomId}`);
@@ -72,7 +74,8 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
                 Object.values(me.connections).forEach((connection: any) => {
                     const conn = connection[0];
                     console.log(conn.peerConnection.getSenders()[1]);
-                    conn.peerConnection.getSenders()[1]
+                    conn.peerConnection
+                        .getSenders()[1]
                         .replaceTrack(videoTrack)
                         .catch((err: any) => console.error(err));
                 });
@@ -125,9 +128,13 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
 
     const shareScreen = () => {
         if(screenSharingId) {
-            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(switchStream)
+            navigator.mediaDevices
+                .getUserMedia({video: true, audio: true})
+                .then(switchStream)
         } else {
-            navigator.mediaDevices.getDisplayMedia({}).then(switchStream)
+            navigator.mediaDevices
+                .getDisplayMedia({})
+                .then(switchStream)
         }
     }
 
@@ -138,10 +145,11 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         setMe(peer);
 
         try {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then((stream) => {
-                setStream(stream);
-            })
+            navigator.mediaDevices
+                .getUserMedia({ video: true, audio: true })
+                .then((stream) => {
+                    setStream(stream);
+                })
         } catch (error) {
            console.error(error); 
         }
@@ -149,9 +157,32 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         ws.on('room-created', enterRoom);
         ws.on('get-users', getUsers);
         ws.on('user-disconnected', removePeer);
+        ws.on('user-started-sharing', (peerId) => {
+            setScreenSharingId(peerId);
+        });
+        ws.on('user-stopped-sharing', () => {
+            setScreenSharingId("");
+        });
+
+        return () => {
+            ws.off('room-created');
+            ws.off('user-joined');
+            ws.off('get-users');
+            ws.off('user-disconnected');
+            ws.off('user-started-sharing');
+            ws.off('user-stopped-sharing');
+        }
         
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (screenSharingId) {
+            ws.emit("start-sharing", { peerId: screenSharingId, roomId})
+        } else {
+            ws.emit("stop-sharing");
+        }
+    }, [screenSharingId, roomId])
 
     useEffect(() => {
         if(!me) return;
@@ -176,7 +207,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
     console.log({ peers })
 
     return (
-        <RoomContext.Provider value={{ws, me, stream, peers, shareScreen}}>
+        <RoomContext.Provider value={{ws, me, stream, peers, shareScreen, screenSharingId, setRoomId}}>
             {children}
         </RoomContext.Provider>
     )
