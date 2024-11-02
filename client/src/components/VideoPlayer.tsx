@@ -9,6 +9,6 @@ export const VideoPlayer: React.FC<{ stream: MediaStream }> = ({ stream }) => {
                videoRef.current.srcObject = stream;
            } 
         }, [stream]),
-        <video ref={videoRef} autoPlay muted/>
+        <video ref={videoRef} autoPlay muted className="rounded-lg"/>
     )
 }
