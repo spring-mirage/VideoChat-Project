@@ -140,8 +140,13 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
 
     useEffect(() => {
         const meId = uuidv4();
-
         const peer = new Peer(meId);
+
+        // const peer = new Peer(meId, {
+        //     host: "localhost",
+        //     port: 9001,
+        //     path: "/myapp",       
+        // });
         setMe(peer);
 
         try {
