@@ -8,7 +8,7 @@ export const Join: React.FC = () => {
   }
 
   return (
-    <button onClick={createRoom} className='bg-emerald-300 py-2 px-8 rounded-lg text-xl hover:bg-emerald-600 hover:text-white font-semibold'>
+    <button onClick={createRoom} className='bg-emerald-500 py-2 px-8 rounded-lg text-xl text-white hover:bg-emerald-600 hover:text-white font-semibold'>
       Start new Meeting
     </button>
   );
