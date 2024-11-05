@@ -2,7 +2,7 @@ import { useContext, useEffect } from "react";
 import { useParams } from "react-router-dom"
 import { RoomContext } from "../context/RoomContext";
 import { VideoPlayer } from "../components/VideoPlayer";
-import { PeerState } from "../context/PeerReducer";
+import { PeerState } from "../reducers/PeerReducer";
 import { ShareScreenButton } from "../components/ShareScreenButton";
 import { ChatButton } from "../components/ChatButton";
 import { Chat } from "../components/chat/Chat";

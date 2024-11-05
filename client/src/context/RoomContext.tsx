@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { io as socketIOClient } from 'socket.io-client';
 import Peer from 'peerjs';
 import { v4 as uuidv4 } from 'uuid';
-import { peersReducer } from './PeerReducer';
-import { addPeerAction, removePeerAction } from './PeerActions';
+import { peersReducer } from '../reducers/PeerReducer';
+import { addPeerAction, removePeerAction } from '../reducers/PeerActions';
+import { IMessage } from '../components/types/chat';
+import { chatReducer } from '../reducers/ChatReducer';
+import { addHistoryAction, addMessageAction } from '../reducers/ChatActions';
 
 const WS = ('http://localhost:6001');
 
@@ -26,6 +29,10 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
     const [stream, setStream] = useState<MediaStream | null>(null);
     
     const [peers, dispatch] = useReducer(peersReducer, {})
+
+    const [chat, chatDispatch] = useReducer(chatReducer, {
+        messages: [],
+    })
 
     const [screenSharingId, setScreenSharingId] = useState<string | null>()
 
@@ -57,73 +64,17 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         setStream(stream);
         setScreenSharingId(me?.id || "");
 
-        // Object.values(me?.connections).forEach((connection: any) => {
-        //     const videoTrack = stream
-        //         ?.getTracks()
-        //         .find((track) => track.kind === 'video');
-            
-        //     connection[0].peerConnection
-        //         .getSenders()[1]
-        //         .replaceTrack(videoTrack)
-        //         .catch((err:any) => console.error(err));
-        // });
 
-        if (me && stream) {
-            const videoTrack = stream.getTracks().find((track) => track.kind === 'video');
-            if (videoTrack) {
-                Object.values(me.connections).forEach((connection: any) => {
-                    const conn = connection[0];
-                    console.log(conn.peerConnection.getSenders()[1]);
-                    conn.peerConnection
-                        .getSenders()[1]
-                        .replaceTrack(videoTrack)
-                        .catch((err: any) => console.error(err));
-                });
-            }
-        }
-
-        // Store active connections manually
-        // const activeConnections: { [peerId: string]: any } = {};
-
-        // // Replacing the video track on each active connection
-        // Object.values(activeConnections).forEach((connection: any) => {
-        //     const videoTrack = stream?.getTracks().find((track) => track.kind === 'video');
-        //     if (!videoTrack) {
-        //         console.error("No video track found in the stream.");
-        //         return;
-        //     }
-
-        //     const sender = connection.peerConnection?.getSenders()?.[1];
-        //     if (sender) {
-        //         sender.replaceTrack(videoTrack).catch((err: any) => console.error(err));
-        //     } else {
-        //         console.error("Sender not found or index out of bounds.");
-        //     }
-        // });
-
-
-        // Reemplazo de Object.values(me?.connections)
-        // if (me && stream) {
-        //     const videoTrack = stream.getTracks().find((track) => track.kind === 'video');
-        //     if (videoTrack) {
-        //         me.on('call', (call) => {
-        //             call.answer(stream);
-        //             call.on('stream', (peerStream) => {
-        //                 dispatch(addPeerAction(call.peer, peerStream));
-        //             });
-        //         });
-
-        //         me.on('connection', (conn) => {
-        //             conn.on('open', () => {
-        //                 conn.peerConnection.getSenders().forEach((sender) => {
-        //                     if (sender.track?.kind === 'video') {
-        //                         sender.replaceTrack(videoTrack).catch((err) => console.error(err));
-        //                     }
-        //                 });
-        //             });
-        //         });
-        //     }
-        // }
+        Object.values(me?.connections).forEach((connection: any) => {
+            const videoTrack: any = stream
+                ?.getTracks()
+                .find((track) => track.kind === "video");
+            connection[0].peerConnection
+                .getSenders()
+                .find((sender: any) => sender.track.kind === "video")
+                .replaceTrack(videoTrack)
+                .catch((err: any) => console.error(err));
+        });
     }
 
     const shareScreen = () => {
@@ -136,6 +87,26 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
                 .getDisplayMedia({})
                 .then(switchStream)
         }
+    }
+
+    const sendMessage = (message: string) => {
+        const messageData: IMessage = {
+            content: message,
+            timestamp: new Date().getTime(),
+            author: me?.id,
+        };
+        chatDispatch(addMessageAction(messageData));
+
+        ws.emit('send-message', roomId, messageData)
+    }
+
+    const addMessage = (message: IMessage) => {
+        console.log("new message", message);
+        chatDispatch(addMessageAction(message));
+    }
+    
+    const addHistory = (message: IMessage[]) => {
+        chatDispatch(addHistoryAction(message));
     }
 
     useEffect(() => {
@@ -160,12 +131,10 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         ws.on('room-created', enterRoom);
         ws.on('get-users', getUsers);
         ws.on('user-disconnected', removePeer);
-        ws.on('user-started-sharing', (peerId) => {
-            setScreenSharingId(peerId);
-        });
-        ws.on('user-stopped-sharing', () => {
-            setScreenSharingId("");
-        });
+        ws.on('user-started-sharing', (peerId) => setScreenSharingId(peerId));
+        ws.on('user-stopped-sharing', () => setScreenSharingId(""));
+        ws.on('add-message', addMessage);
+        ws.on('get-messages', addHistory);
 
         return () => {
             ws.off('room-created');
@@ -174,6 +143,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
             ws.off('user-disconnected');
             ws.off('user-started-sharing');
             ws.off('user-stopped-sharing');
+            ws.off('add-message');
         }
         
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,7 +180,19 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
     console.log({ peers })
 
     return (
-        <RoomContext.Provider value={{ws, me, stream, peers, shareScreen, screenSharingId, setRoomId}}>
+        <RoomContext.Provider 
+            value={{
+                ws, 
+                me, 
+                stream, 
+                peers,
+                chat, 
+                shareScreen, 
+                screenSharingId, 
+                setRoomId,
+                sendMessage
+            }}
+        >
             {children}
         </RoomContext.Provider>
     )
