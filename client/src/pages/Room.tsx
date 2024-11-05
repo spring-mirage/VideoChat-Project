@@ -10,7 +10,18 @@ import { Chat } from "../components/chat/Chat";
 export const Room = () => {
 
   const { id } = useParams();
-  const { ws, me, stream, peers, shareScreen, screenSharingId, setRoomId } = useContext(RoomContext)
+  const { 
+    ws, 
+    me, 
+    stream, 
+    peers, 
+    shareScreen, 
+    screenSharingId, 
+    setRoomId, 
+    toggleChat,
+    chat 
+  } = useContext(RoomContext)
+
   useEffect(() => {
     if(me) ws.emit("join-room", {roomId: id, peerId: me._id})
   }, [id, me, ws])
@@ -42,13 +53,15 @@ export const Room = () => {
             <VideoPlayer  stream={peer.stream} />
           ))}
         </div>
-        <div className="border-l-2 pb-28">
-          <Chat />
-        </div>
+        {chat.isChatOpen && (
+          <div className="border-l-2 pb-28">
+            <Chat />
+          </div>
+        )}
       </div>
       <div className="bg-black text-white h-28 fixed bottom-0 p-6 w-full items-center flex justify-center border-t-2">
         <ShareScreenButton onClick={shareScreen}/>
-        <ChatButton onClick={shareScreen}/>
+        <ChatButton onClick={toggleChat}/>
       </div>
     </div>
   )

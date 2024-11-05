@@ -8,7 +8,7 @@ import { peersReducer } from '../reducers/PeerReducer';
 import { addPeerAction, removePeerAction } from '../reducers/PeerActions';
 import { IMessage } from '../components/types/chat';
 import { chatReducer } from '../reducers/ChatReducer';
-import { addHistoryAction, addMessageAction } from '../reducers/ChatActions';
+import { addHistoryAction, addMessageAction, toggleChatAction } from '../reducers/ChatActions';
 
 const WS = ('http://localhost:6001');
 
@@ -32,6 +32,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
 
     const [chat, chatDispatch] = useReducer(chatReducer, {
         messages: [],
+        isChatOpen: false
     })
 
     const [screenSharingId, setScreenSharingId] = useState<string | null>()
@@ -107,6 +108,10 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
     
     const addHistory = (message: IMessage[]) => {
         chatDispatch(addHistoryAction(message));
+    }
+
+    const toggleChat = () => {
+        chatDispatch(toggleChatAction(!chat.isChatOpen));
     }
 
     useEffect(() => {
@@ -190,7 +195,8 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
                 shareScreen, 
                 screenSharingId, 
                 setRoomId,
-                sendMessage
+                sendMessage,
+                toggleChat
             }}
         >
             {children}
