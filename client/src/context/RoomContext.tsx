@@ -5,7 +5,7 @@ import { io as socketIOClient } from 'socket.io-client';
 import Peer from 'peerjs';
 import { v4 as uuidv4 } from 'uuid';
 import { peersReducer } from '../reducers/PeerReducer';
-import { addPeerAction, removePeerAction } from '../reducers/PeerActions';
+import { addPeerStreamAction, addPeerNameAction, removePeerAction } from '../reducers/PeerActions';
 import { IMessage } from '../components/types/chat';
 import { chatReducer } from '../reducers/ChatReducer';
 import { addHistoryAction, addMessageAction, toggleChatAction } from '../reducers/ChatActions';
@@ -26,7 +26,9 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
 
     const [me, setMe] = useState<Peer>();
 
-    const [stream, setStream] = useState<MediaStream | null>(null);
+    const [userName, setUserName] = useState(localStorage.getItem("userName") || "")
+
+    const [stream, setStream] = useState<MediaStream>();
     
     const [peers, dispatch] = useReducer(peersReducer, {})
 
@@ -35,26 +37,17 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         isChatOpen: false
     })
 
-    const [screenSharingId, setScreenSharingId] = useState<string | null>()
+    const [screenSharingId, setScreenSharingId] = useState<string>("")
 
-    const [roomId, setRoomId] = useState<string | null>(null);
+    const [roomId, setRoomId] = useState<string>("");
 
     const enterRoom = ({ roomId }: { roomId: string}) => {
         console.log({roomId});
         navigate(`/room/${roomId}`);
     }
 
-    const getUsers = ({ participants }: { participants: string[]}) => {
+    const getUsers = ({ participants } : { participants: string[]}) => {
         console.log({participants});
-        // Agregar nuevos peers
-        participants.forEach(peerId => {
-            if (!peers[peerId] && stream) {
-                const call = me?.call(peerId, stream);
-                call?.on('stream', (peerStream) => {
-                    dispatch(addPeerAction(peerId, peerStream));
-                });
-            }
-        });
     }
 
     const removePeer = (peerId: string) => {
@@ -115,8 +108,18 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
     }
 
     useEffect(() => {
-        const meId = uuidv4();
+        localStorage.setItem("userName", userName);
+        // console.log("userName", userName);
+    }, [userName]);
 
+    useEffect(() => {
+
+        const savedId = localStorage.getItem("userId");
+
+        const meId = savedId || uuidv4();
+
+        localStorage.setItem("userId", meId);
+        console.log({savedId, meId});
         const peer = new Peer(meId, {
             host: "videochat-project.onrender.com",
             secure: true,     
@@ -166,21 +169,28 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         if(!me) return;
         if(!stream) return;
 
-        ws.on('user-joined', ({peerId}) => {
-            const call = me.call(peerId, stream);
+        ws.on('user-joined', ({ peerId, userName: name }) => {
+            dispatch(addPeerNameAction(peerId, name));
+            const call = me.call(peerId, stream, {
+                metadata: {
+                    userName
+                }
+            });
             call.on('stream',(peerStream) => {
-                dispatch(addPeerAction(peerId, peerStream));
+                dispatch(addPeerStreamAction(peerId, peerStream));
             })
         });
 
         me.on('call', (call) => {
+            const { userName } = call.metadata;
+            dispatch(addPeerNameAction(call.peer, userName));
             call.answer(stream);
             call.on('stream',(peerStream) => {
-                dispatch(addPeerAction(call.peer, peerStream));
+                dispatch(addPeerStreamAction(call.peer, peerStream));
             })
         });
         
-    }, [me, stream]);
+    }, [me, stream, userName]);
 
     console.log({ peers })
 
@@ -196,7 +206,9 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
                 screenSharingId, 
                 setRoomId,
                 sendMessage,
-                toggleChat
+                toggleChat,
+                userName,
+                setUserName
             }}
         >
             {children}

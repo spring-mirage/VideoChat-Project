@@ -1,14 +1,12 @@
 import { useEffect, useRef } from "react";
 
-export const VideoPlayer: React.FC<{ stream: MediaStream }> = ({ stream }) => {
+export const VideoPlayer: React.FC<{ stream?: MediaStream }> = ({ stream }) => {
     
     const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current && stream) videoRef.current.srcObject = stream;
+     }, [stream]);
     return (
-        useEffect(() => {
-           if (videoRef.current) {
-               videoRef.current.srcObject = stream;
-           } 
-        }, [stream]),
-        <video ref={videoRef} autoPlay muted className="rounded-lg"/>
+        <video style={{width: "100%"}} ref={videoRef} autoPlay muted className="rounded-lg"/>
     )
 }
