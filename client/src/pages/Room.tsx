@@ -25,8 +25,8 @@ export const Room = () => {
   } = useContext(RoomContext)
 
   useEffect(() => {
-    if(me) ws.emit("join-room", {roomId: id, peerId: me._id, userName})
-  }, [id, me, ws, userName])
+    if(me && stream) ws.emit("join-room", {roomId: id, peerId: me._id, userName})
+  }, [id, me, ws, userName, stream])
 
   useEffect(() => {
     setRoomId(id)
@@ -64,9 +64,11 @@ export const Room = () => {
           }
 
           { 
-            Object.values(peersToShow as PeerState).map((peer) => (
+            Object.values(peersToShow as PeerState)
+            .filter((peer) => !!peer.stream)
+            .map((peer) => (
               <div>
-                <VideoPlayer  stream={peer.stream} /> 
+                <VideoPlayer stream={peer.stream} /> 
                 <div className="text-white">{ peer.userName }</div>
               </div>
             )

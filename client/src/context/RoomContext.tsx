@@ -5,7 +5,7 @@ import { io as socketIOClient } from 'socket.io-client';
 import Peer from 'peerjs';
 import { v4 as uuidv4 } from 'uuid';
 import { peersReducer } from '../reducers/PeerReducer';
-import { addPeerStreamAction, addPeerNameAction, removePeerAction } from '../reducers/PeerActions';
+import { addPeerStreamAction, addPeerNameAction, removePeerStreamAction, addAllPeersAction } from '../reducers/PeerActions';
 import { IMessage } from '../components/types/chat';
 import { chatReducer } from '../reducers/ChatReducer';
 import { addHistoryAction, addMessageAction, toggleChatAction } from '../reducers/ChatActions';
@@ -46,13 +46,14 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         navigate(`/room/${roomId}`);
     }
 
-    const getUsers = ({ participants } : { participants: string[]}) => {
+    const getUsers = ({ participants } : { participants: Record<string, {userName: string}> }) => {
         console.log({participants});
+        dispatch(addAllPeersAction(participants));
     }
 
     const removePeer = (peerId: string) => {
-        dispatch(removePeerAction(peerId));
-    }
+        dispatch(removePeerStreamAction(peerId));
+    };
 
     const switchStream = (stream: MediaStream) => {
         setStream(stream);
@@ -107,6 +108,13 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         chatDispatch(toggleChatAction(!chat.isChatOpen));
     }
 
+    const nameChangedHandle = ({ peerId, userName } : {
+        peerId: string,
+        userName: string
+    }) => {
+        dispatch(addPeerNameAction(peerId, userName));
+    }
+
     useEffect(() => {
         localStorage.setItem("userName", userName);
         // console.log("userName", userName);
@@ -143,6 +151,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
         ws.on('user-stopped-sharing', () => setScreenSharingId(""));
         ws.on('add-message', addMessage);
         ws.on('get-messages', addHistory);
+        ws.on('name-changed', nameChangedHandle)
 
         return () => {
             ws.off('room-created');
@@ -152,6 +161,7 @@ export const RoomProvider: React.FC<RoomProviderProps> = ({ children }) => {
             ws.off('user-started-sharing');
             ws.off('user-stopped-sharing');
             ws.off('add-message');
+            ws.off('name-changed');
         }
         
     // eslint-disable-next-line react-hooks/exhaustive-deps
