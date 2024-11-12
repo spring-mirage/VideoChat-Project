@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc --build",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "build-1": "npx tsc",
+    "start-1": "node dist/index.js"
   },
   "author": "",
   "license": "ISC",
