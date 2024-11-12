@@ -29,3 +29,6 @@ server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
+app.get('/', (_, res) => {
+    res.send('Hello World!');
+});
