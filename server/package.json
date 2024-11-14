@@ -9,7 +9,9 @@
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "start": "ts-node src/index.ts",
     "build-1": "npx tsc",
-    "start-1": "node dist/index.js"
+    "start-1": "node dist/index.js",
+    "start-2": "tsc && node dist/index.js",
+    "lint": "eslint . --ext .ts"
   },
   "author": "",
   "license": "ISC",
