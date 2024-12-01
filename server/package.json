@@ -5,10 +5,9 @@
   "scripts": {
     "prebuild": "Eslint -c tslint.json -p tsconfig.js --fix",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc --build",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "start": "ts-node src/index.ts",
-    "build-1": "npx tsc",
+    "build": "npx tsc",
     "start-1": "node dist/index.js",
     "start-2": "tsc && node dist/index.js",
     "lint": "eslint . --ext .ts"
